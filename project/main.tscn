@@ -1,0 +1,124 @@
+[gd_scene load_steps=5 format=3 uid="uid://0rjlpt1ofn35"]
+
+[ext_resource type="Texture2D" uid="uid://cmkk3m40fcq6f" path="res://ext/kenny/tiny_dungeon/Tilemap/barbarian.atlas.tres" id="1_s5yjo"]
+
+[sub_resource type="GDScript" id="GDScript_p4xvt"]
+script/source = "extends CharacterBody2D
+
+
+const SPEED = 100.0
+const FRICTION = 0.08;
+const JUMP_VELOCITY = -400.0
+
+# Get the gravity from the project settings to be synced with RigidBody nodes.
+var gravity = ProjectSettings.get_setting(\"physics/2d/default_gravity\")
+
+
+func _physics_process(delta):
+	
+	# Get the input direction and handle the movement/deceleration.
+	# As good practice, you should replace UI actions with custom gameplay actions.
+	var direction = Vector2(Input.get_axis(\"ui_left\", \"ui_right\"), Input.get_axis(\"ui_up\", \"ui_down\")).normalized()
+	if direction.x:
+		velocity.x = direction.x * SPEED
+	else:
+		velocity.x = move_toward(velocity.x, 0, SPEED - SPEED * (1.0 - FRICTION))
+	
+	# Get the input direction and handle the movement/deceleration.
+	# As good practice, you should replace UI actions with custom gameplay actions.
+	if direction.y:
+		velocity.y = direction.y * SPEED
+	else:
+		velocity.y = move_toward(velocity.y, 0, SPEED - SPEED * (1.0 - FRICTION))
+	move_and_slide()
+"
+
+[sub_resource type="GDScript" id="GDScript_oe6dt"]
+script/source = "extends MovementSensor2D
+
+enum FACING {
+	LEFT = -1,
+	RIGHT = 1
+}
+
+signal facing_change(right)
+
+var facing = FACING.RIGHT :
+	set(value):
+		if facing != value:
+			facing = value
+			emit_signal(\"facing_change\", facing < 0)
+
+# Called every frame. 'delta' is the elapsed time since the previous frame.
+func _physics_process(delta):
+	var left_right_accel = get_acceleration().dot(Vector2.RIGHT)
+	var left_right_velocity = get_velocity().dot(Vector2.RIGHT)
+	if left_right_accel < 0.0 and left_right_velocity < 0.0:
+		facing = FACING.LEFT
+	elif left_right_accel > 0.0 and left_right_velocity > 0.0:
+		facing = FACING.RIGHT
+"
+
+[sub_resource type="GDScript" id="GDScript_cweom"]
+script/source = "extends Control
+
+@export var motion_sensor_path : NodePath
+@onready var motion_sensor = get_node(motion_sensor_path)
+
+# Called every frame. 'delta' is the elapsed time since the previous frame.
+func _process(delta):
+	var velocity = motion_sensor.get_velocity()
+	var acceleration = motion_sensor.get_acceleration()
+	
+	$Panel/VBoxContainer/Label.text = str(acceleration) + \",\" + str(velocity)
+"
+
+[node name="Main" type="Node2D"]
+
+[node name="CharacterBody2D" type="CharacterBody2D" parent="."]
+position = Vector2(41, 30)
+script = SubResource("GDScript_p4xvt")
+
+[node name="Sprite2D" type="Sprite2D" parent="CharacterBody2D"]
+texture_filter = 1
+texture = ExtResource("1_s5yjo")
+offset = Vector2(0, -8)
+
+[node name="MotionSensor2D" type="MovementSensor2D" parent="CharacterBody2D"]
+script = SubResource("GDScript_oe6dt")
+
+[node name="Camera2D" type="Camera2D" parent="."]
+position = Vector2(125, 78)
+zoom = Vector2(4, 4)
+
+[node name="CanvasLayer" type="CanvasLayer" parent="."]
+
+[node name="Control" type="Control" parent="CanvasLayer"]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+script = SubResource("GDScript_cweom")
+motion_sensor_path = NodePath("../../CharacterBody2D/MotionSensor2D")
+
+[node name="Panel" type="Panel" parent="CanvasLayer/Control"]
+layout_mode = 0
+offset_right = 327.0
+offset_bottom = 25.0
+
+[node name="VBoxContainer" type="VBoxContainer" parent="CanvasLayer/Control/Panel"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="Label" type="Label" parent="CanvasLayer/Control/Panel/VBoxContainer"]
+layout_mode = 2
+text = "$$$,$$$
+"
+
+[connection signal="facing_change" from="CharacterBody2D/MotionSensor2D" to="CharacterBody2D/Sprite2D" method="set_flip_h"]

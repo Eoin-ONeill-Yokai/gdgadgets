@@ -1,0 +1,16 @@
+**/.sconsign.dblite
+**.obj
+**.o[s]
+**.dll
+**.lib
+**.zip
+**.pck
+platform/private_*.py
+bin/*.*
+project/.godot/**
+project/bin/*
+!project/bin/gadgets.gdextension
+!project/bin/icons
+project/platform/*
+project/export_presets.cfg
+godot-cpp
