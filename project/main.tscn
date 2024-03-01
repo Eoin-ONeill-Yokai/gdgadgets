@@ -1,4 +1,4 @@
-[gd_scene load_steps=5 format=3 uid="uid://0rjlpt1ofn35"]
+[gd_scene load_steps=6 format=3 uid="uid://0rjlpt1ofn35"]
 
 [ext_resource type="Texture2D" uid="uid://cmkk3m40fcq6f" path="res://ext/kenny/tiny_dungeon/Tilemap/barbarian.atlas.tres" id="1_s5yjo"]
 
@@ -31,6 +31,15 @@ func _physics_process(delta):
 	else:
 		velocity.y = move_toward(velocity.y, 0, SPEED - SPEED * (1.0 - FRICTION))
 	move_and_slide()
+
+
+func _on_motion_sensor_2d_awake():
+	$GPUParticles2D.emitting = true
+	%MovementDebugUI.show_node()
+
+
+func _on_motion_sensor_2d_sleep():
+	%MovementDebugUI.begin_hide()
 "
 
 [sub_resource type="GDScript" id="GDScript_oe6dt"]
@@ -59,11 +68,24 @@ func _physics_process(delta):
 		facing = FACING.RIGHT
 "
 
+[sub_resource type="ParticleProcessMaterial" id="ParticleProcessMaterial_cjj28"]
+particle_flag_disable_z = true
+direction = Vector3(0, -1, 0)
+spread = 90.0
+flatness = 0.556
+initial_velocity_min = 20.0
+initial_velocity_max = 20.0
+gravity = Vector3(0, 0, 0)
+scale_max = 2.0
+color = Color(0.52549, 0.34902, 0.423529, 1)
+
 [sub_resource type="GDScript" id="GDScript_cweom"]
 script/source = "extends Control
 
 @export var motion_sensor_path : NodePath
 @onready var motion_sensor = get_node(motion_sensor_path)
+
+var _remaining_tween : Tween = null
 
 # Called every frame. 'delta' is the elapsed time since the previous frame.
 func _process(delta):
@@ -71,6 +93,21 @@ func _process(delta):
 	var acceleration = motion_sensor.get_acceleration()
 	
 	$Panel/VBoxContainer/Label.text = str(acceleration) + \",\" + str(velocity)
+
+func begin_hide():
+	print(\"HIDE\")
+	_remaining_tween = get_tree().create_tween()
+	_remaining_tween.tween_property(self, \"modulate:a\", 0.0, 0.1 )
+	_remaining_tween.finished.connect(
+		func():
+			print(\"OK?\")
+	)
+
+func show_node():
+	if _remaining_tween and _remaining_tween.is_valid() and _remaining_tween.is_running():
+		_remaining_tween.stop()
+	
+	self.modulate.a = 1.0
 "
 
 [node name="Main" type="Node2D"]
@@ -87,13 +124,21 @@ offset = Vector2(0, -8)
 [node name="MotionSensor2D" type="MovementSensor2D" parent="CharacterBody2D"]
 script = SubResource("GDScript_oe6dt")
 
+[node name="GPUParticles2D" type="GPUParticles2D" parent="CharacterBody2D"]
+emitting = false
+process_material = SubResource("ParticleProcessMaterial_cjj28")
+lifetime = 0.2
+one_shot = true
+explosiveness = 1.0
+
 [node name="Camera2D" type="Camera2D" parent="."]
 position = Vector2(125, 78)
 zoom = Vector2(4, 4)
 
 [node name="CanvasLayer" type="CanvasLayer" parent="."]
 
-[node name="Control" type="Control" parent="CanvasLayer"]
+[node name="MovementDebugUI" type="Control" parent="CanvasLayer"]
+unique_name_in_owner = true
 layout_mode = 3
 anchors_preset = 15
 anchor_right = 1.0
@@ -103,12 +148,12 @@ grow_vertical = 2
 script = SubResource("GDScript_cweom")
 motion_sensor_path = NodePath("../../CharacterBody2D/MotionSensor2D")
 
-[node name="Panel" type="Panel" parent="CanvasLayer/Control"]
+[node name="Panel" type="Panel" parent="CanvasLayer/MovementDebugUI"]
 layout_mode = 0
 offset_right = 327.0
 offset_bottom = 25.0
 
-[node name="VBoxContainer" type="VBoxContainer" parent="CanvasLayer/Control/Panel"]
+[node name="VBoxContainer" type="VBoxContainer" parent="CanvasLayer/MovementDebugUI/Panel"]
 layout_mode = 1
 anchors_preset = 15
 anchor_right = 1.0
@@ -116,9 +161,11 @@ anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
 
-[node name="Label" type="Label" parent="CanvasLayer/Control/Panel/VBoxContainer"]
+[node name="Label" type="Label" parent="CanvasLayer/MovementDebugUI/Panel/VBoxContainer"]
 layout_mode = 2
 text = "$$$,$$$
 "
 
+[connection signal="awake" from="CharacterBody2D/MotionSensor2D" to="CharacterBody2D" method="_on_motion_sensor_2d_awake"]
 [connection signal="facing_change" from="CharacterBody2D/MotionSensor2D" to="CharacterBody2D/Sprite2D" method="set_flip_h"]
+[connection signal="sleep" from="CharacterBody2D/MotionSensor2D" to="CharacterBody2D" method="_on_motion_sensor_2d_sleep"]

@@ -14,7 +14,7 @@ config/name="GDGadgets (GDExtension example project)"
 config/description="A simple gd extension adding simple utility nodes."
 config/tags=PackedStringArray("demo", "example")
 run/main_scene="res://main.tscn"
-config/features=PackedStringArray("4.3")
+config/features=PackedStringArray("4.2")
 
 [display]
 
